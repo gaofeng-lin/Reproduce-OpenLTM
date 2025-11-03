@@ -254,7 +254,10 @@ class Exp_Forecast(Exp_Basic):
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
+                # print('batch_x shape:', batch_x.shape)
                 outputs = self.model(batch_x, batch_x_mark, batch_y_mark)
+                # print('outputs shape:', outputs.shape)
+                
 
                 # print('batch_x shape:', batch_x.shape)
                 # print('outputs shape:', outputs.shape)
@@ -264,8 +267,8 @@ class Exp_Forecast(Exp_Basic):
                     torch.cuda.synchronize()
                 # if self.args.ddp:
                 #     torch.cuda.synchronize()
-                # if self.args.nonautoregressive:
-                #     batch_y = batch_y[:, -self.args.output_token_len:, :]
+                if self.args.nonautoregressive:
+                    batch_y = batch_y[:, -self.args.output_token_len:, :]
                 if self.args.covariate:
                     if self.args.last_token:
                         outputs = outputs[:, -self.args.output_token_len:, -1]
@@ -274,8 +277,10 @@ class Exp_Forecast(Exp_Basic):
                         outputs = outputs[:, :, -1]
                         batch_y = batch_y[:, :, -1]
                 
-                print('train outputs shape:', outputs.shape)
-                print('train batch_y shape:', batch_y.shape)
+                # print('train outputs shape:', outputs.shape)
+                # print('outputsoutputs[:,:,0]: ', outputs[:,:,0])
+                # breakpoint()
+                # print('train batch_y shape:', batch_y.shape)
                 loss = criterion(outputs, batch_y)
                 if (i + 1) % 100 == 0:
                     if (self.args.ddp and self.args.local_rank == 0) or not self.args.ddp:

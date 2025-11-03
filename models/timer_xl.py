@@ -55,7 +55,7 @@ class Model(nn.Module):
         B, _, C = x.shape
         # [B, C, L]
         x = x.permute(0, 2, 1)
-        # [B, C, N, P]
+        # [B, C, N, input_token_len]
         x = x.unfold(
             dimension=-1, size=self.input_token_len, step=self.input_token_len)
         # N: number of tokens
@@ -66,10 +66,10 @@ class Model(nn.Module):
         # [B, C * N, D]
         embed_out = embed_out.reshape(B, C * N, -1)
         embed_out, attns = self.blocks(embed_out, n_vars=C, n_tokens=N)
-        # [B, C * N, P]
+        # [B, C * N, output_token_len]
         dec_out = self.head(embed_out)
         # print('dec_out shape:', dec_out.shape)
-        # [B, C, N * P]
+        # [B, C, N * output_token_len]
         dec_out = dec_out.reshape(B, C, N, -1).reshape(B, C, -1)
         # [B, L, C]
         dec_out = dec_out.permute(0, 2, 1)

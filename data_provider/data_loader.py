@@ -95,8 +95,8 @@ class UnivariateDatasetBenchmark(Dataset):
         # 假设data_x长度为100(100个样本)，seq_len为10，output_token_len为2，那么n_timepoint就是100-10-2+1=89
         # 所以这里不应该表示output_token_len，而应该是output_seq_len。因为data_loader处理的是序列，而不是token。
         # 传入模型的是序列，模型内部会对序列进行分块处理，形成token。
-        # self.n_timepoint =  len(self.data_x) - self.seq_len - self.output_token_len + 1
-        self.n_timepoint =  len(self.data_x) - self.seq_len - self.output_len + 1
+        self.n_timepoint =  len(self.data_x) - self.seq_len - self.output_token_len + 1
+        # self.n_timepoint =  len(self.data_x) - self.seq_len - self.output_len + 1
         
     def __getitem__(self, index):
 
@@ -106,7 +106,7 @@ class UnivariateDatasetBenchmark(Dataset):
         # s_end表示序列的结束位置
         s_end = s_begin + self.seq_len
 
-        # 不加--nonautoregressive
+        # 不加--nonautoregressive。自回归模式。
         # 输入序列与输出序列​​部分重叠​​，模型学习从​​一段历史​​直接映射到​​一段未来​
         if not self.nonautoregressive:
             r_begin = s_begin + self.input_token_len
@@ -117,25 +117,21 @@ class UnivariateDatasetBenchmark(Dataset):
             seq_x = self.data_x[s_begin:s_end, feat_id:feat_id+1]
             seq_y = self.data_y[r_begin:r_end, feat_id:feat_id+1]
             seq_y = torch.tensor(seq_y)
-            # if self.set_type == 2:
-            #     print('r_begin:', r_begin)
-            #     print('r_end:', r_end)
-            #     print('s_begin:', s_begin)
-            #     print('self.seq_len:', self.seq_len)
-            #     print('self.input_token_len:', self.input_token_len)
-            #     print('self.output_token_len:', self.output_token_len)
-            #     print('\n')
-
-            #     print('seq_y before unfold shape:', seq_y.shape)
-            # breakpoint()
-            seq_y = seq_y.unfold(dimension=0, size=self.output_token_len,
-                                 step=self.input_token_len).permute(0, 2, 1)
+            # print('seq_y before unfold shape:', seq_y.shape)
+            # 假设seq_y的shape是torch.Size([672, 1])，output_token_len=96，input_token_len=96
+            # unfold后变为torch.Size([7, 1, 96])，目前还没弄清楚为什么是([7, 1, 96])
+            seq_y = seq_y.unfold(dimension=0, size=self.output_token_len, step=self.input_token_len)
+            # print('seq_y after unfold shape:', seq_y.shape)
+            seq_y = seq_y.permute(0, 2, 1)
+            # print('seq_y after permute shape:', seq_y.shape)
             seq_y = seq_y.reshape(seq_y.shape[0] * seq_y.shape[1], -1)
-        # 加了--nonautoregressive。
+            # print('seq_y after reshape shape:', seq_y.shape)
+        # 加了--nonautoregressive。非自回归模式。
         # 输出序列​​紧接​​输入序列，模型学习从​​历史序列​​预测​​紧接着的下一个时间步​
         else:
             r_begin = s_end
             # r_end = r_begin + self.output_token_len
+            # 修改了r_end的定义，将token长度改为序列长度
             r_end = r_begin + self.output_len
             seq_x = self.data_x[s_begin:s_end, feat_id:feat_id+1]
             seq_y = self.data_y[r_begin:r_end, feat_id:feat_id+1]
@@ -150,8 +146,10 @@ class UnivariateDatasetBenchmark(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
+        # set_type=0表示训练集;n_var表示特征个数; n_timepoint表示可以使用多少个不重叠的样本
         if self.set_type == 0:
             return max(int(self.n_var * self.n_timepoint * self.subset_rand_ratio), 1)
+        # 其余表示验证集和测试集
         else:
             return int(self.n_var * self.n_timepoint)
 

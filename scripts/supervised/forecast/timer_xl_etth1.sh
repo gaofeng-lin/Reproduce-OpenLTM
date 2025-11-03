@@ -11,7 +11,7 @@ output_len=672
 # 这个值应该对应论文的patch_size，但是代码中并没有使用patch_size参数
 input_token_len=96
 # output_token_len通常与input_token_len相同。模型源码部分的注释中也是让输入和输出序列长度相等
-output_token_len=$input_token_len
+output_token_len=96
 
 
 python -u run.py \
@@ -21,7 +21,7 @@ python -u run.py \
   --data_path ETTh1.csv \
   --model_id ETTh1 \
   --model $model_name \
-  --data UnivariateDatasetBenchmark  \
+  --data  UnivariateDatasetBenchmark  \
   --seq_len $seq_len \
   --input_token_len $input_token_len \
   --output_token_len $output_token_len \
@@ -37,7 +37,6 @@ python -u run.py \
   --lradj type1 \
   --use_norm \
   --e_layers 1 \
-  --nonautoregressive \
   --valid_last
 
 
